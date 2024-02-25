@@ -1,0 +1,535 @@
+# This is a basic workflow to help you get started with Actions
+
+name: gradingWorkflow
+
+# Controls when the workflow will run
+on:
+  # Triggers the workflow on push or pull request events but only for the "main" branch
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+
+  build-and-test:
+    # The type of runner that the job will run on
+    runs-on: windows-2019
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      - uses: actions/checkout@v3
+
+
+      - name: check grading files
+        uses: actions/checkout@v3
+        with:
+          repository: yxc1yxc/gradingLAB3
+          token: ${{ LAB3 }}
+          path: grading
+      
+
+      
+      - name: Setup CMake
+        uses: jwlawson/actions-setup-cmake@v1.9
+
+      - name: Create Build Environment
+        run: cmake -B build
+
+      - name: Build
+        run: cmake --build build --config Debug
+
+
+      - name: Run with bad input
+        id: bad_input_check
+        run: |
+          try {
+          .\build\src\Debug\*.exe gkaygakydfla
+          if ($LASTEXITCODE -eq 0) {
+            Write-Output "Program should have failed for bad input!"
+            echo "::set-output name=exit_code::2"
+            exit 2
+          }
+          } catch {
+            Write-Output "Program crashed or encountered an exception!"
+            echo "::set-output name=exit_code::3"
+            exit 3
+          }
+        continue-on-error: true
+
+
+      - name: Check exit code from previous step
+        run: |
+          if ("${{ steps.bad_input_check.outputs.exit_code }}" -eq "2") {
+            Write-Output "Program should have failed for bad input!"
+            exit 1
+          }
+          elseif ("${{ steps.bad_input_check.outputs.exit_code }}" -eq "3") {
+            Write-Output "Program crashed or encountered an exception!"
+            exit 1
+          }
+
+          
+
+      - name: Run with improper input
+        id: improperStatus
+        run: |
+            try {
+                .\build\src\Debug\*.exe abcde > improperOutput.txt
+                $exitCode = $LastExitCode
+              } catch {
+                Write-Output "Program crashed or encountered an exception!"
+                echo "::set-output name=exit_code::3"
+                exit 3
+              }
+        continue-on-error: true
+
+
+      - name: Check crash from improper
+        run: |
+            if ("${{ steps.improperStatus.outputs.exit_code }}" -eq "3") {
+            Write-Output "Program crashed or encountered an exception!"
+            exit 1
+            }
+        
+      - name: Check improper
+        run: |
+          $content = Get-Content improperOutput.txt
+          if ($content -match 'usage') {
+            Write-Output "passed"
+          } else {
+            Write-Output "failed"
+            exit 1
+          }
+        
+
+        
+      - name: Display
+        run: Get-Content improperOutput.txt
+
+        
+      - name: Run with proper input
+        run: Get-Content .\grading\WintestA.txt | .\build\src\Debug\*.exe TicTacToe > testAOutput.txt
+        
+
+      - name: Display testAOutput.txt
+        run: Get-Content testAOutput.txt
+
+      - name: Check for 'win' or 'won' in output file
+        run: |
+          $content = Get-Content testAOutput.txt
+          if ($content -match 'win' -or $content -match 'won') {
+            Write-Output "Test win passed"
+          } else {
+            Write-Output "Test win failed, make sure your output contains the word 'win' or 'won'"
+            exit 1
+          }
+
+
+      - name: check empty board
+        run: |
+          $actual = Get-Content testAOutput.txt -Raw
+          $expected = Get-Content .\grading\emptyBoardTesting.txt -Raw
+          if ($actual -match $expected) {
+            Write-Host "Empty board state is correct."
+          } else {
+            Write-Host "Empty board state is incorrect. Note that incorrect spacing can also cause an error!"
+            exit 1
+          }
+
+      - name: check first step
+        run: |
+          $actual = Get-Content testAOutput.txt -Raw
+          $expected = Get-Content .\grading\testAstep1.txt -Raw
+          if ($actual -match $expected) {
+            Write-Host "step 1 is correct."
+          } else {
+            Write-Host "step 1 is incorrect. Note that incorrect spacing can also cause an error!"
+            exit 1
+          }
+
+
+      - name: check second step
+        run: |
+          $actual = Get-Content testAOutput.txt -Raw
+          $expected = Get-Content testAstep2.txt -Raw
+          if ($actual -match $expected) {
+            Write-Host "step 2 is correct."
+          } else {
+            Write-Host "step 2 is incorrect. Note that incorrect spacing can also cause an error!"
+            exit 1
+          }
+
+
+      - name: check third step
+        run: |
+          $actual = Get-Content testAOutput.txt -Raw
+          $expected = Get-Content .\grading\testAstep3.txt -Raw
+          if ($actual -match $expected) {
+            Write-Host "step 3 is correct."
+          } else {
+            Write-Host "step 3 is incorrect. Note that incorrect spacing can also cause an error!"
+            exit 1
+          }
+
+
+      - name: check fourth step
+        run: |
+          $actual = Get-Content testAOutput.txt -Raw
+          $expected = Get-Content .\grading\testAstep4.txt -Raw
+          if ($actual -match $expected) {
+            Write-Host "step 4 is correct."
+          } else {
+            Write-Host "step 4 is incorrect. Note that incorrect spacing can also cause an error!"
+            exit 1
+          }
+
+
+      - name: check fifth step
+        run: |
+          $actual = Get-Content testAOutput.txt -Raw
+          $expected = Get-Content .\grading\testAstep5.txt -Raw
+          if ($actual -match $expected) {
+            Write-Host "step 5 is correct."
+          } else {
+            Write-Host "step 5 is incorrect. Note that incorrect spacing can also cause an error!"
+            exit 1
+          }
+
+      - name: Run with proper input B
+        run: Get-Content .\grading\WintestB.txt | .\build\src\Debug\*.exe TicTacToe > testBOutput.txt
+        
+
+      - name: Display testBOutput.txt
+        run: Get-Content testBOutput.txt
+
+      - name: Check for 'win' or 'won' in output file
+        run: |
+          $content = Get-Content testBOutput.txt
+          if ($content -match 'win' -or $content -match 'won') {
+            Write-Output "Test win passed"
+          } else {
+            Write-Output "Test win failed, make sure your output contains the word 'win' or 'won'"
+            exit 1
+          }
+
+
+      - name: check empty board
+        run: |
+          $actual = Get-Content testBOutput.txt -Raw
+          $expected = Get-Content .\grading\emptyBoardTesting.txt -Raw
+          if ($actual -match $expected) {
+            Write-Host "Empty board state is correct."
+          } else {
+            Write-Host "Empty board state is incorrect. Note that incorrect spacing can also cause an error!"
+            exit 1
+          }
+
+      - name: check first step
+        run: |
+          $actual = Get-Content testBOutput.txt -Raw
+          $expected = Get-Content .\grading\testBstep1.txt -Raw
+          if ($actual -match $expected) {
+            Write-Host "step 1 is correct."
+          } else {
+            Write-Host "step 1 is incorrect. Note that incorrect spacing can also cause an error!"
+            exit 1
+          }
+
+
+      - name: check second step
+        run: |
+          $actual = Get-Content testBOutput.txt -Raw
+          $expected = Get-Content .\grading\testBstep2.txt -Raw
+          if ($actual -match $expected) {
+            Write-Host "step 2 is correct."
+          } else {
+            Write-Host "step 2 is incorrect. Note that incorrect spacing can also cause an error!"
+            exit 1
+          }
+
+
+      - name: check third step
+        run: |
+          $actual = Get-Content testBOutput.txt -Raw
+          $expected = Get-Content .\grading\testBstep3.txt -Raw
+          if ($actual -match $expected) {
+            Write-Host "step 3 is correct."
+          } else {
+            Write-Host "step 3 is incorrect. Note that incorrect spacing can also cause an error!"
+            exit 1
+          }
+
+
+      - name: check fourth step
+        run: |
+          $actual = Get-Content testBOutput.txt -Raw
+          $expected = Get-Content .\grading\testBstep4.txt -Raw
+          if ($actual -match $expected) {
+            Write-Host "step 4 is correct."
+          } else {
+            Write-Host "step 4 is incorrect. Note that incorrect spacing can also cause an error!"
+            exit 1
+          }
+
+
+      - name: check fifth step
+        run: |
+          $actual = Get-Content testBOutput.txt -Raw
+          $expected = Get-Content .\grading\testBstep5.txt -Raw
+          if ($actual -match $expected) {
+            Write-Host "step 5 is correct."
+          } else {
+            Write-Host "step 5 is incorrect. Note that incorrect spacing can also cause an error!"
+            exit 1
+          }
+
+      - name: Run with proper input C
+        run: Get-Content .\grading\WintestC.txt | .\build\src\Debug\*.exe TicTacToe > testCOutput.txt
+        
+
+      - name: Display testCOutput.txt
+        run: Get-Content testCOutput.txt
+
+      - name: Check for 'win' or 'won' in output file
+        run: |
+          $content = Get-Content testCOutput.txt
+          if ($content -match 'win' -or $content -match 'won') {
+            Write-Output "Test win passed"
+          } else {
+            Write-Output "Test win failed, make sure your output contains the word 'win' or 'won'"
+            exit 1
+          }
+
+
+      - name: check empty board
+        run: |
+          $actual = Get-Content testCOutput.txt -Raw
+          $expected = Get-Content .\grading\emptyBoardTesting.txt -Raw
+          if ($actual -match $expected) {
+            Write-Host "Empty board state is correct."
+          } else {
+            Write-Host "Empty board state is incorrect."
+            exit 1
+          }
+
+      - name: check first step
+        run: |
+          $actual = Get-Content testCOutput.txt -Raw
+          $expected = Get-Content .\grading\testCstep1.txt -Raw
+          if ($actual -match $expected) {
+            Write-Host "step 1 is correct."
+          } else {
+            Write-Host "step 1 is incorrect. Note that incorrect spacing can also cause an error!"
+            exit 1
+          }
+
+
+      - name: check second step
+        run: |
+          $actual = Get-Content testCOutput.txt -Raw
+          $expected = Get-Content .\grading\testCstep2.txt -Raw
+          if ($actual -match $expected) {
+            Write-Host "step 2 is correct."
+          } else {
+            Write-Host "step 2 is incorrect. Note that incorrect spacing can also cause an error!"
+            exit 1
+          }
+
+
+      - name: check third step
+        run: |
+          $actual = Get-Content testCOutput.txt -Raw
+          $expected = Get-Content .\grading\testCstep3.txt -Raw
+          if ($actual -match $expected) {
+            Write-Host "step 3 is correct."
+          } else {
+            Write-Host "step 3 is incorrect. Note that incorrect spacing can also cause an error!"
+            exit 1
+          }
+
+
+      - name: check fourth step
+        run: |
+          $actual = Get-Content testCOutput.txt -Raw
+          $expected = Get-Content .\grading\testCstep4.txt -Raw
+          if ($actual -match $expected) {
+            Write-Host "step 4 is correct."
+          } else {
+            Write-Host "step 4 is incorrect. Note that incorrect spacing can also cause an error!"
+            exit 1
+          }
+
+
+      - name: check fifth step
+        run: |
+          $actual = Get-Content testCOutput.txt -Raw
+          $expected = Get-Content .\grading\testCstep5.txt -Raw
+          if ($actual -match $expected) {
+            Write-Host "step 5 is correct."
+          } else {
+            Write-Host "step 5 is incorrect. Note that incorrect spacing can also cause an error!"
+            exit 1
+          }
+
+      - name: Run with draw input
+        run: Get-Content .\grading\drawTest.txt | .\build\src\Debug\*.exe TicTacToe > drawCase.txt
+        continue-on-error: true
+
+      - name: Check draw
+        run: |
+          $content = Get-Content drawCase.txt
+          if ($content -match 'draw' -or $content -match 'stalmate') {
+            Write-Output "Test draw passed"
+          } else {
+            Write-Output "Test draw failed! Make sure your output contains the word 'draw'"
+            exit 1
+          }
+
+
+      - name: input for quit
+        run: Get-Content .\grading\quitTestA.txt | .\build\src\Debug\*.exe TicTacToe > quitTestAOutPut.txt 
+        continue-on-error: true
+
+      - name: Display output content
+        run: |
+          $content = Get-Content quitTestAOutPut.txt -Raw
+          Write-Host "Content of quitTestAOutPut.txt:"
+          Write-Host $content
+
+      - name: check quit first
+        run: |
+          $actual = Get-Content quitTestAOutPut.txt -Raw
+          $conditions = Get-Content -Path quitTestAresult.txt
+          
+          $allMatched = $true
+          
+          foreach ($condition in $conditions) {
+              if (-not ($actual -match $condition)) {
+                  $allMatched = $false
+                  Write-Host "'$condition' not found in the output."
+                  break
+              }
+          }
+
+          if ($allMatched) {
+              Write-Host "All conditions found in the output."
+          } else {
+              exit 1
+          }
+
+      - name: input for quit part 2
+        run: Get-Content .\grading\quitTestB.txt | .\build\src\Debug\*.exe TicTacToe > quitTestBOutPut.txt 
+        continue-on-error: true
+
+      
+
+      - name: check quit second
+        run: |
+          $actual = Get-Content quitTestBOutPut.txt -Raw
+          $conditions = Get-Content -Path quitTestBresult.txt
+          
+          $allMatched = $true
+          
+          foreach ($condition in $conditions) {
+              if (-not ($actual -match $condition)) {
+                  $allMatched = $false
+                  Write-Host "$condition not found in the output."
+                  exit 1
+              }
+          }
+          
+          if ($allMatched) {
+              Write-Host "All conditions found in the output."
+          }
+        continue-on-error: true
+
+      - name: input for history check
+        run: Get-Content .\grading\WintestA.txt | .\build\src\Debug\*.exe TicTacToe > historyOutput.txt
+
+      - name: Display
+        run: Get-Content historyOutput.txt
+
+      - name: check history
+        run: |
+          $actualLines = Get-Content historyOutput.txt
+          $conditions = Get-Content -Path .\grading\recordPattern.txt
+          $allMatched = $true
+          
+          # Iterate over each pattern
+          foreach ($condition in $conditions) {
+              # Initialize match flag for current pattern
+              $patternMatched = $false
+              
+              # Check current pattern against each line of the actual output
+              foreach ($line in $actualLines) {
+                  if ($line -match $condition) {
+                      $patternMatched = $true
+                      break # Pattern matched, no need to check further
+                  }
+              }
+          
+              # If the current pattern was not matched, report and set the failure flag
+              if (-not $patternMatched) {
+                  $allMatched = $false
+                  Write-Host "$condition not found in the output."
+                  exit 1 # Exit if any pattern does not match
+              }
+          }
+          
+          # Report the final result
+          if ($allMatched) {
+              Write-Host "All conditions found in the output."
+          }
+
+
+      - name: Run with invalid input
+        id: invalid_input_check
+        run: |
+          $ErrorActionPreference = 'Stop'
+          try {
+            Get-Content invalidInput.txt | .\build\src\Debug\*.exe TicTacToe > invalidOutput.txt
+            $exitCode = $LastExitCode
+          } catch {
+            Write-Output "Program crashed or encountered an exception!"
+            echo "::set-output name=exit_code::3"
+            exit 3
+          }
+          Write-Output "Program terminated normally."
+        continue-on-error: true
+          
+
+        
+      - name: Check crash from invalid
+        run: |
+            if ("${{ steps.invalid_input_check.outputs.exit_code }}" -eq "3") {
+            Write-Output "Program crashed or encountered an exception!"
+            exit 1
+            }
+
+      - name: check invalid handling
+        run: |
+          $actual = Get-Content invalidOutput.txt -Raw
+          $expected = Get-Content testAstep1.txt -Raw
+          if ($actual -match $expected) {
+            Write-Host "invalid input handling  success"
+          } else {
+            Write-Host "invalid input handling  failed"
+            exit 1
+          }
+
+          $actual = Get-Content invalidOutput.txt -Raw
+          $expected = Get-Content emptyBoardTesting.txt -Raw
+          if ($actual -match $expected) {
+            Write-Host "invalid input handling  success"
+          } else {
+            Write-Host "invalid input handling  failed"
+            exit 1
+          }
+
+
+      
